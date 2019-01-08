@@ -13,7 +13,10 @@ procedure rectification is
 	Heater : Float := 19.0;
 	Mash_Temperature : Float := 19.0;
 	Room_Temperature : Float := 19.0;
+	Mash_Amount : Float := 100.0;
+	Container_State : Float := 0.0;
 	Next_Time : Time := Clock + 0.1;
+	Efficiency : Float := 0.6;
 	The_End : Boolean := False;
 
 	procedure CLS is
@@ -36,16 +39,15 @@ procedure rectification is
 
 	begin
 	    Main_Loop : loop
-			--delay until Next_Time;
+		
 			delay 0.2;
-			if Mash_Temperature >= 84.0 then
+			if Mash_Temperature >= 85.0 then
 				Decrease_Heat;
 			else
 				Increase_Heat;
 			end if;
-			--Put_Line("Heater loop");
-			--Put(Heater,3,2,0);
-			exit when The_End; -- exit the heater loop
+			
+			exit when The_End; 
 		end loop Main_Loop;
 	end Regulate_Temp;
 
@@ -78,6 +80,23 @@ procedure rectification is
 	end Current_Temperature;
 
 	Button_Clicked : Character;
+	
+	task Controls;
+	task body Controls is
+	begin
+	Get_Immediate(Button_Clicked);
+	end Controls;
+	
+	task Valve;
+	task body Valve is
+	Vaporated_Amount : Float := 0.01;
+	begin
+		if Mash_Temperature >= 84.00 then
+			delay 0.5;
+			Container_State := Container_State + Efficiency * Vaporated_Amount;
+			Mash_Amount := Mash_Amount - Vaporated_Amount;
+		end if;
+	end Valve;
 
 begin
 	Main_Loop: loop
@@ -88,11 +107,14 @@ begin
     	New_Line;
     	Put_Line("Mash temp:");
     	Put(Mash_Temperature,3,2,0);
+    	New_Line;
+    	Put("Bottle state");
         New_Line;
+        Put(Container_State,3,2,0);
         delay 0.7;
-        CLS;
+        
 
-    	--Get_Immediate(Button_Clicked);
+    	
     	exit when Button_Clicked in 'q'|'Q';
 	end loop Main_Loop;
 	The_End := True;
