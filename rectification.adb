@@ -92,6 +92,7 @@ procedure rectification is
     	Get_Immediate(Button_Clicked);
 	end Controls;
 
+
 	task ProductionCalculator;
 	task body ProductionCalculator is
     Efficiency : Float := 0.8;
@@ -117,6 +118,7 @@ procedure rectification is
         end loop;
 	end ProductionCalculator;
 
+
     task ValvesSensor;
     task body ValvesSensor is
         SEDCapacity : Float := 0.5;
@@ -131,7 +133,7 @@ procedure rectification is
                     Mash_Amount := Mash_Amount + ValveEff;
                     SED1 := SED1 - ValveEff;
                 end loop;
-                SED1_Valve := False;            
+                SED1_Valve := False;
             end if;
 
             if SED2 >= SEDCapacity then
@@ -152,6 +154,10 @@ begin
 	Main_Loop: loop
         CLS;
         New_Line;
+        Put("           SPIRIT RECTIFICATION");
+        New_Line;
+        Put("###############################################");
+        New_Line;
         Put("Heater temp:"); Put("    "); Put("Mash temp:");
     	New_Line;
     	Put(Heater+50.0,3,2,0); Put(" C"); -- na pale +50 stopni !! do zmiany
@@ -171,6 +177,8 @@ begin
         New_Line;
         Put("Sedimentation Tank 2: "); Put(SED2,3,2,0); Put(" L    Valve: ");
         if SED2_Valve then Put("OPEN"); else Put("CLOSED"); end if;
+        New_Line;
+        Put("###############################################");
         New_Line;
         delay 0.01;
     	exit when Button_Clicked in 'q'|'Q';
