@@ -6,28 +6,41 @@ use Ada.Float_Text_IO;
 with Ada.Calendar;
 use Ada.Calendar;
 
+with Ada.Text_IO;
+use Ada.Text_IO;
+with Ada.Float_Text_IO;
+use Ada.Float_Text_IO;
+
+with Ada.Calendar;
+use Ada.Calendar;
+with Ada.Numerics.Float_Random;
+
+with Ada.Strings;
+use Ada.Strings;
+with Ada.Strings.Fixed;
+use Ada.Strings.Fixed;
+
+with Ada.Exceptions;
+use Ada.Exceptions;
+
+
 
 
 procedure rectification is
 
-	Heater : Float := 19.0;
-	Mash_Temperature : Float := 19.0;
+	Heater : Float := 19.0 with Atomic;
+	Mash_Temperature : Float := 19.0 with Atomic;
 	Room_Temperature : Float := 19.0;
-	Mash_Amount : Float := 100.0;
-    Ethanol_Biol_Temp : Float := 78.9;
-	Container_State : Float := 0.0;
-	Next_Time : Time := Clock + 0.1;
-	The_End : Boolean := False;
+	Mash_Amount : Float := 100.0 with Atomic;
+    Ethanol_Biol_Temp : Float := 78.9 with Atomic;
+	Container_State : Float := 0.0 with Atomic;
+	Next_Time : Time := Clock + 0.1 with Atomic;
+	The_End : Boolean := False with Atomic;
 
-    SED1_Valve : Boolean := False; -- False mean closed
-    SED1 : Float := 0.0;
-    SED2_Valve : Boolean := False;
-    SED2 : Float := 0.0;
-
-	procedure CLS is
-	begin
-		Put(ASCII.ESC & "[2J");
-	end CLS;
+    SED1_Valve : Boolean := False with Atomic; -- False mean closed
+    SED1 : Float := 0.0 with Atomic;
+    SED2_Valve : Boolean := False with Atomic;
+    SED2 : Float := 0.0 with Atomic;
 
 	task Regulate_Temp;
 	task body Regulate_Temp  is
@@ -150,38 +163,103 @@ procedure rectification is
     end ValvesSensor;
 
 
+    type TextAttributes is (Clear, Bright, Underlined, Negative, Flashing, Gray, Red, Green);
+
+    protected Screen  is
+      procedure Print_XY(X,Y: Positive; S: String; Attrib : TextAttributes := Clear);
+      procedure Print_Float_XY(X, Y: Positive;
+                              Num: Float;
+                              Pre: Natural := 3;
+                              Aft: Natural := 2;
+                              Exp: Natural := 0;
+                              Attrib : TextAttributes := Clear);
+      procedure CLS;
+      procedure Background;
+      procedure PrintData;
+    end Screen;
+
+    protected body Screen is
+      -- implementacja dla Linuxa i macOSX
+      function Attrib_Fun(Attrib : TextAttributes) return String is
+        (case Attrib is
+         when Bright => "1m", when Underlined => "4m", when Negative => "7m",
+         when Flashing => "5m", when Gray => "37m", when Clear => "0m", when Red => "31m", when Green => "32m");
+
+      function Esc_XY(X,Y : Positive) return String is
+        ( (ASCII.ESC & "[" & Trim(Y'Img,Both) & ";" & Trim(X'Img,Both) & "H") );
+
+      procedure Print_XY(X,Y: Positive; S: String; Attrib : TextAttributes := Clear) is
+        Przed : String := ASCII.ESC & "[" & Attrib_Fun(Attrib);
+      begin
+        Put( Przed);
+        Put( Esc_XY(X,Y) & S);
+        Put( ASCII.ESC & "[0m");
+      end Print_XY;
+
+      procedure Print_Float_XY(X, Y: Positive;
+                              Num: Float;
+                              Pre: Natural := 3;
+                              Aft: Natural := 2;
+                              Exp: Natural := 0;
+                              Attrib : TextAttributes := Clear) is
+
+        Przed_Str : String := ASCII.ESC & "[" & Attrib_Fun(Attrib);
+      begin
+        Put( Przed_Str);
+        Put( Esc_XY(X, Y) );
+        Put( Num, Pre, Aft, Exp);
+        Put( ASCII.ESC & "[0m");
+      end Print_Float_XY;
+
+      procedure CLS is
+      begin
+        Put(ASCII.ESC & "[2J");
+      end CLS;
+
+      procedure Background is
+      begin
+        Screen.CLS;
+        Screen.Print_XY(1,1,"#################### Spirit Rectification ####################",Gray);
+        for I in Integer range 2..30 loop
+            Screen.Print_XY(1,I,"#",Gray);
+            Screen.Print_XY(62,I,"#",Gray);
+        end loop;
+        Screen.Print_XY(3,3,"Heater temp:",Gray);
+        Screen.Print_XY(25,3,"Mash temp:",Gray);
+        Screen.Print_XY(3,6,"Mash amount:",Gray);
+        Screen.Print_XY(25,6,"Spirit produced:",Gray);
+        Screen.Print_XY(3,9,"Sedimentation Tank 1:",Gray);
+        Screen.Print_XY(35,9,"Valve:",Gray);
+        Screen.Print_XY(3,10,"Sedimentation Tank 2:",Gray);
+        Screen.Print_XY(35,10,"Valve:",Gray);
+    Screen.Print_XY(32,30,"Click 'Q/q' to end simulation",Flashing);
+        Screen.Print_XY(1,31,"##############################################################",Gray);
+      end Background;
+
+      procedure PrintData is
+      begin -- PrintData
+          Screen.Print_Float_XY(15,3,Heater,3,2,0,Green);
+      if Mash_Temperature > 81.0 then Screen.Print_Float_XY(35,3,Mash_Temperature,3,2,0,Red); else Screen.Print_Float_XY(35,3,Mash_Temperature,3,2,0,Green); end if;
+
+          Screen.Print_Float_XY(16,6,Mash_Amount,3,2,0,Green);
+          Screen.Print_Float_XY(41,6,Container_State,3,2,0,Green);
+          Screen.Print_Float_XY(25,9,SED1,3,2,0,Green);
+      if SED1_Valve then Screen.Print_XY(42,9,"Open",Bright); else Screen.Print_XY(42,9,"Closed",Red); end if;
+          Screen.Print_Float_XY(25,10,SED2,3,2,0,Green);
+      if SED2_Valve then Screen.Print_XY(42,10,"Open",Bright); else Screen.Print_XY(42,10,"Closed",Red); end if;
+      end PrintData;
+
+    end Screen;
+
 begin
 	Main_Loop: loop
-        CLS;
-        New_Line;
-        Put("           SPIRIT RECTIFICATION");
-        New_Line;
-        Put("###############################################");
-        New_Line;
-        Put("Heater temp:"); Put("    "); Put("Mash temp:");
-    	New_Line;
-    	Put(Heater+50.0,3,2,0); Put(" C"); -- na pale +50 stopni !! do zmiany
-        Put("       ");
-        Put(Mash_Temperature,3,2,0); Put(" C");
-    	New_Line; New_Line;
-
-    	Put("Mash amount:"); Put("    "); Put("Spirit produced:");
-        New_Line;
-        Put(Mash_Amount,3,2,0); Put(" L");
-        Put("       ");
-        Put(Container_State,3,2,0); Put(" L");
-        New_Line; New_Line;
-
-        Put("Sedimentation Tank 1: "); Put(SED1,3,2,0); Put(" L    Valve: ");
-        if SED1_Valve then Put("OPEN"); else Put("CLOSED"); end if;
-        New_Line;
-        Put("Sedimentation Tank 2: "); Put(SED2,3,2,0); Put(" L    Valve: ");
-        if SED2_Valve then Put("OPEN"); else Put("CLOSED"); end if;
-        New_Line;
-        Put("###############################################");
-        New_Line;
-        delay 0.01;
+        Screen.Background;
+        Screen.PrintData;
+        Screen.Print_XY(1,32,"",Clear);
+        delay 0.1;
     	exit when Button_Clicked in 'q'|'Q';
 	end loop Main_Loop;
 	The_End := True;
+    Screen.Print_XY(1,500,"",Clear);
+    Screen.CLS;
 end rectification;
