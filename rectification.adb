@@ -43,7 +43,8 @@ procedure Main is
 		SED1 : Float := 0.0 with Atomic;
 		SED2_Valve : Boolean := False with Atomic;
 		SED2 : Float := 0.0 with Atomic;
-	
+		Time_Passed : Float := 0.0 with Atomic;
+		
 		procedure Initialize_Data is
 		begin
 			Starting_Mash_Amount := Mash_Amount ;
@@ -131,6 +132,7 @@ procedure Main is
 		        Screen.Print_XY(1,I,"#",Gray);
 		        Screen.Print_XY(62,I,"#",Gray);
 		    end loop;
+		    Screen.Print_XY(32,15,"Time passed:");
 		    Screen.Print_XY(3,3,"Heater temp:",Gray);
 		    Screen.Print_XY(25,3,"Mash temp:",Gray);
 		    Screen.Print_XY(3,6,"Mash amount:",Gray);
@@ -146,6 +148,7 @@ procedure Main is
 		  procedure PrintData is
 		  begin -- PrintData
 		      Screen.Print_Float_XY(15,3,Heater,3,2,0,Green);
+		      Screen.Print_Float_XY(46,15,Time_Passed,3,2,0,Gray);
 		  if Mash_Temperature > 81.0 then Screen.Print_Float_XY(35,3,Mash_Temperature,3,2,0,Red); else Screen.Print_Float_XY(35,3,Mash_Temperature,3,2,0,Green); end if;
 
 		      Screen.Print_Float_XY(16,6,Mash_Amount,3,2,0,Green);
@@ -160,8 +163,18 @@ procedure Main is
 		
 	
 	procedure rectification is
-
-	
+		
+		
+		task Count_Time;
+		task body Count_Time is
+		begin
+			loop
+			delay 0.2;
+			Time_Passed :=Time_Passed+0.2; 	
+			exit when The_End;
+			end loop;
+		end Count_Time;
+		
 		task Regulate_Temp;
 		task body Regulate_Temp  is
 
