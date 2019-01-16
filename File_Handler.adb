@@ -43,16 +43,7 @@ package body File_Handler is
         File_Name : constant String := "state.dat";
         F : File_Type;
         begin
-        	begin
-        		Open (File => F, Mode => In_File, Name => File_Name);
-        	exception
-        		when Name_Error => Put_Line("File does not exist, start new simulation");
-        		Set_Exit_Status (Failure);
-        		--return;
-        	end;
-
-
-
+        	Open (File => F, Mode => In_File, Name => File_Name);
         	Heater := Float'value(Get_Line(F));
         	Mash_Temperature := Float'value(Get_Line(F));
         	Room_Temperature := Float'value(Get_Line(F));

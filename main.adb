@@ -150,15 +150,15 @@ procedure Main is
 	  procedure PrintData is
 	  begin -- PrintData
           Screen.Print_Float_XY(56,2,Time_Passed,3,0,0,Gray);
-	      Screen.Print_Float_XY(15,3,Heater,3,2,0,Green);
+	      Screen.Print_Float_XY(15,3,Heater+54.0,3,2,0,Green);
 	  if Mash_Temperature > 81.0 then Screen.Print_Float_XY(35,3,Mash_Temperature,3,2,0,Red); else Screen.Print_Float_XY(35,3,Mash_Temperature,3,2,0,Green); end if;
 
 	      Screen.Print_Float_XY(16,6,Mash_Amount,3,2,0,Green);
 	      Screen.Print_Float_XY(41,6,Container_State,3,2,0,Green);
 	      Screen.Print_Float_XY(25,9,SED1,3,2,0,Green);
-	  if SED1_Valve then Screen.Print_XY(42,9,"Open",Bright); else Screen.Print_XY(42,9,"Closed",Red); end if;
+	  if SED1_Valve then Screen.Print_XY(42,9,"Open     ",Bright); else Screen.Print_XY(42,9,"Closed",Red); end if;
 	      Screen.Print_Float_XY(25,10,SED2,3,2,0,Green);
-	  if SED2_Valve then Screen.Print_XY(42,10,"Open",Bright); else Screen.Print_XY(42,10,"Closed",Red); end if;
+	  if SED2_Valve then Screen.Print_XY(42,10,"Open     ",Bright); else Screen.Print_XY(42,10,"Closed",Red); end if;
 	  end PrintData;
 
 	end Screen;
@@ -179,12 +179,12 @@ procedure Main is
 
 			procedure Increase_Heat is
 			begin
-			Heater := Float'Min(Heater + 0.3, 200.0);
+			Heater := Float'Min(Heater + 0.3, 150.0);
 			end Increase_Heat;
 
 			procedure Decrease_Heat is
 			begin
-			Heater := Float'Max(Heater - 0.15, 75.0);
+			Heater := Float'Max(Heater - 0.15, 70.0);
 			end Decrease_Heat;
 
 		begin
@@ -200,26 +200,22 @@ procedure Main is
 
 		task Current_Temperature;
 		task body Current_Temperature is
-			function Calculate_Mash_Temperature (Heater_Heat, Mash_Heat :Float) return Float is
+            function Calculate_Mash_Temperature (Heater_Heat, Mash_Heat :Float) return Float is
 			begin
-				if Heater_Heat >= Mash_Heat + 18.0 then -- 18 jako strata ciepla
+				if Heater_Heat >= Mash_Heat  then -- 20 jako strata ciepla
 					return Float'Min(Mash_Heat+(Heater_Heat-Mash_Heat)/10.0 ,200.0);
 				else
 					return Float'Max(Mash_Heat-(Mash_Heat-Heater_Heat)/10.0 ,Room_Temperature);
 				end if;
 			end Calculate_Mash_Temperature;
 
-			procedure Update_Mash_Update is
-			begin
-				Mash_Temperature := Calculate_Mash_Temperature(Heater, Mash_Temperature);--get actual data
-			end Update_Mash_Update;
-
 		begin
 			while The_End = False loop
 				--delay until Next_Time;
 				delay 0.4;
 				--Put_Line("mash loop");
-				Update_Mash_Update;
+				Mash_Temperature := Calculate_Mash_Temperature(Heater, Mash_Temperature);
+
 			end loop;
 		end Current_Temperature;
 
@@ -292,6 +288,9 @@ procedure Main is
                 Get_Immediate(Button_Clicked);
                 if Button_Clicked  in 'q'|'Q' then
                     The_End := True;
+                    Screen.Print_XY(1,500,"",Clear);
+            		Screen.CLS;
+                    Create_File_With_Current_State(Heater, Mash_Temperature,Room_Temperature, Mash_Amount,Starting_Mash_Amount, Potential_Ethanol_Percentage,Potential_Ethanol_Amount, Container_State,SED1, SED2,Time_Passed);
                 end if;
 			end loop;
 		end Controls;
@@ -305,19 +304,25 @@ procedure Main is
 		    delay 0.1;
 		end loop;
 		The_End := True;
-		Screen.Print_XY(1,500,"",Clear);
-		Screen.CLS;
 	end rectification;
 
     procedure Get_User_Data is
         begin
         Screen.Print_XY(1,1,"",Clear);
         Screen.ClS;
-        Put_Line("");
-        Put_Line("Enter Starting Mash Amount(litres):  ");
+        Screen.Print_XY(1,1,"Enter Starting Mash Amount(litres): ");
         Get(Mash_Amount);
-        Put_Line("Enter potential alcohol percentage (in %): ");
+        Screen.Print_XY(1,3,"Enter potential alcohol percentage (in %): ");
         Get(Potential_Ethanol_Percentage);
+        while Potential_Ethanol_Percentage>= 100.0 loop
+            Screen.Print_XY(1,4,"You've inserted incorrect data!",Red);
+            Screen.Print_XY(1,5,"alcolhol percentage must be below 100% ",Red);
+            Screen.Print_XY(1,3,"",Clear);
+            Screen.Print_XY(1,3,"Enter potential alcohol percentage (in %):            ");
+            Screen.Print_XY(44,3,"",Clear);
+            Get(Potential_Ethanol_Percentage);
+        end loop;
+
         Initialize_Data;
     end Get_User_Data;
 
@@ -334,8 +339,9 @@ procedure Main is
                 								Potential_Ethanol_Amount, Container_State,
                 								SED1, SED2,
                 								Time_Passed);
+            elsif Button_Clicked in 'Q'|'q' then
+                The_End := True;
     		end if;
-
     end FirstScreen;
 
 
@@ -344,12 +350,19 @@ procedure Main is
         FirstScreen;
         Screen.CLS;
 		rectification;
-        Create_File_With_Current_State(Heater, Mash_Temperature,Room_Temperature, Mash_Amount,Starting_Mash_Amount, Potential_Ethanol_Percentage,Potential_Ethanol_Amount, Container_State,SED1, SED2,Time_Passed);
-        exception when Data_Error =>
-            Screen.CLS;
-            Screen.Print_XY(1,1,"You've inserted incorrect data!",Red);
-            Screen.Print_XY(1,2,"Click anything to end",Green);
-            get_Immediate(Button_Clicked);
-            The_End := False;
+        exception
+            when Data_Error =>
+                Screen.CLS;
+                Screen.Print_XY(1,1,"You've inserted incorrect data!",Red);
+                Screen.Print_XY(1,2,"Click anything to end",Green);
+                get_Immediate(Button_Clicked);
+                The_End := False;
+            when Name_Error =>
+                Screen.CLS;
+                Screen.Print_XY(1,1,"File does not exist!",Red);
+                Screen.Print_XY(1,2,"Click anything to start default simulation",Green);
+                get_Immediate(Button_Clicked);
+                Screen.CLS;
+                rectification;
 
 	end Main;
